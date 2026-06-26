@@ -21,7 +21,7 @@ router.post('/', (req, res) => {
   const result = db
     .prepare('INSERT INTO mitglied (name, email, telefon, geburtstag) VALUES (?, ?, ?, ?)')
     .run(name, email, telefon, geburtstag)
-  res.status(201).json({ id: result.lastInsertRowid })
+  res.status(201).json({ id: Number(result.lastInsertRowid) })
 })
 
 // PUT /api/v1/mitglieder/:id

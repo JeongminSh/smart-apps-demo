@@ -21,7 +21,7 @@ router.post('/', (req, res) => {
   const result = db
     .prepare('INSERT INTO trainer (name, anstellungsart) VALUES (?, ?)')
     .run(name, anstellungsart)
-  res.status(201).json({ id: result.lastInsertRowid })
+  res.status(201).json({ id: Number(result.lastInsertRowid) })
 })
 
 module.exports = router

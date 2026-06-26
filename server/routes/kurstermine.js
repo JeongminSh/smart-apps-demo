@@ -23,7 +23,7 @@ router.post('/', (req, res) => {
       'INSERT INTO kurstermin (kurstyp_id, trainer_id, datum_zeit, kapazitaet, zoom_link) VALUES (?, ?, ?, ?, ?)'
     )
     .run(kurstyp_id, trainer_id, datum_zeit, kapazitaet, zoom_link)
-  res.status(201).json({ id: result.lastInsertRowid })
+  res.status(201).json({ id: Number(result.lastInsertRowid) })
 })
 
 // PUT /api/v1/kurstermine/:id/absagen

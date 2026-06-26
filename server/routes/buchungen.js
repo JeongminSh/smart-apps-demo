@@ -20,7 +20,7 @@ router.post('/', (req, res) => {
       'INSERT INTO buchung (mitglied_id, kurstermin_id, gebucht_am) VALUES (?, ?, ?)'
     )
     .run(mitglied_id, kurstermin_id, new Date().toISOString())
-  res.status(201).json({ id: result.lastInsertRowid })
+  res.status(201).json({ id: Number(result.lastInsertRowid) })
 })
 
 // PUT /api/v1/buchungen/:id/stornieren

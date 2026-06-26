@@ -28,7 +28,7 @@ router.post('/', (req, res) => {
       'INSERT INTO warteliste (mitglied_id, kurstermin_id, position, eingetragen_am) VALUES (?, ?, ?, ?)'
     )
     .run(mitglied_id, kurstermin_id, position, new Date().toISOString())
-  res.status(201).json({ id: result.lastInsertRowid, position })
+  res.status(201).json({ id: Number(result.lastInsertRowid), position })
 })
 
 module.exports = router
