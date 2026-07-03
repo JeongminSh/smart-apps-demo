@@ -31,7 +31,7 @@ _Stabile Feature-IDs. Nicht umnummerieren. Killed-IDs bleiben killed._
 |----|------|-------|--------|--------|-------|
 | FZ-001 | Mitgliederverwaltung (CRUD + Tarife) | 1 | done | SPEC.md §1, §3 | CRUD + Tarif-Zuweisung; routes: mitglieder/mitgliedschaften/tarife; AdminPage; commit: e0982fb |
 | FZ-002 | Kursplanung durch Admin | 1 | done | SPEC.md §3 Regel 16 | Kurstypen/Trainer/Kurstermine CRUD; Trainer-Filterung; Tab-Nav in AdminPage; commit: 06491cf |
-| FZ-003 | Buchungsverwaltung | 1 | validated | SPEC.md §5 Prio 1 | Wer hat gebucht; Tarif-Limit prüfen |
+| FZ-003 | Buchungsverwaltung | 1 | done | SPEC.md §5 Prio 1 | Validierung (Sperre/Tarif-Limit/Kapazität/Status); Teilnehmerliste; api.js Fehlermeldungen; commit: pending |
 | FZ-004 | Warteliste mit automatischem Nachrücken | 1 | validated | SPEC.md §5 Prio 2 | Max. 5 Plätze; Push/SMS bei Nachrücken |
 | FZ-005 | No-Show-Tracking + Buchungssperre | 1 | validated | SPEC.md §5 Prio 3 | 3x No-Show = 2 Wochen Sperre, automatisch |
 | FZ-006 | Studio-Onboarding (Tablet + SEPA + Welcome-Email) | 1 | validated | SPEC.md §5 Prio 4 | Tablet-Registrierung im Studio; sofortiger Zugang |

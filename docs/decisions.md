@@ -145,6 +145,40 @@ Flat: `/api/v1/mitgliedschaften` als eigenständiger Router.
 
 ---
 
+## 2026-07-03 — Buchungsvalidierung: Reihenfolge und Tarif-Limit-Granularität (FZ-003)
+
+**Kontext:** POST /buchungen muss mehrere Validierungsschritte durchlaufen (Termin existiert, Mitglied existiert, Sperre, Mitgliedschaftsstatus, Duplikat, Tarif-Limit, Kapazität). Reihenfolge und Fehlermeldungen sind UX-relevant.
+
+### Entscheidung
+Validierungsreihenfolge: Termin→Mitglied→Sperre→pausiert/gekündigt→Duplikat→Tarif-Limit→Kapazität. Tarif-Limit zählt aktive Buchungen im Kalendermonat des Kurstermins (nicht des Buchungsdatums) per `substr(datum_zeit, 1, 7)`. `buchungen_pro_monat = NULL` (Plus-Tarif) bedeutet unbegrenzt. Stornierte Buchungen für denselben Termin werden reaktiviert (UPDATE) statt neu inseriert, um den UNIQUE(mitglied_id, kurstermin_id) Constraint zu respektieren.
+
+### Alternativen verworfen
+- Tarif-Limit nach Buchungsdatum: verfehlt den Intent — Lisa meint Monat des Kurs-Stattfindens
+- Kapazitätsprüfung vor Tarif-Limit: führt dazu, dass ein Limit-Fehler nur bei vollem Kurs auftritt — schlechtere UX
+
+### Konsequenzen
+- Positiv: klare, predictable Fehlermeldungen; Reaktivierung erlaubt Storno+Wiederbuchung
+- Risiko: Reaktivierung setzt `gebucht_am` auf aktuelles Datum (Buchungshistorie leicht verfälscht) — in v1 akzeptiert
+
+---
+
+## 2026-07-03 — TeilnehmerModal in KursplanungTab (FZ-003)
+
+**Kontext:** Admins brauchen eine Übersicht wer an einem Kurstermin teilnimmt, und die Möglichkeit, manuell Buchungen hinzuzufügen oder zu stornieren.
+
+### Entscheidung
+`TeilnehmerModal` als eigene Funktionskomponente in `AdminPage.jsx` zwischen KursplanungTab und StammdatenTab. Wird per `buchungsModal`-State in KursplanungTab gesteuert. Zeigt aktive Buchungen zuerst, stornierte ausgegraut. Quick-add-Formular zeigt nur Mitglieder, die noch nicht (aktiv) gebucht haben.
+
+### Alternativen verworfen
+- Eigene Route `/kursplanung/termine/:id`: kein React Router im Admin, alles in einer SPA-Seite
+- Seitenleiste statt Modal: mehr Layout-Aufwand ohne UX-Vorteil
+
+### Konsequenzen
+- Positiv: konsistent mit dem Single-File-Muster aus FZ-002; geringer Pflegeaufwand
+- Risiko: AdminPage.jsx wächst weiter (jetzt ~430 Zeilen) — falls >500 Zeilen, Aufteilung überdenken
+
+---
+
 ## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
 
 **Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.

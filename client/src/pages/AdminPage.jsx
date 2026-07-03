@@ -156,6 +156,7 @@ function KursplanungTab() {
   const [form, setForm] = useState(EMPTY_TERMIN)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [buchungsModal, setBuchungsModal] = useState(null)
 
   useEffect(() => { load(); api.get('/kurstypen').then(setKurstypen); api.get('/trainer').then(setTrainer) }, [])
   function load() { api.get('/kurstermine').then(setKurstermine) }
@@ -216,15 +217,17 @@ function KursplanungTab() {
               <td style={s.td}>{k.buchungen_count} / {k.kapazitaet}</td>
               <td style={s.td}><StatusBadge status={k.status} /></td>
               <td style={s.td}>
+                <button style={s.btnSmall} onClick={() => setBuchungsModal(k)}>Teilnehmer</button>
                 {k.status === 'geplant' && <>
-                  <button style={s.btnSmall} onClick={() => openEdit(k)}>Bearbeiten</button>{' '}
-                  <button style={{ ...s.btnSmall, ...s.btnWarning }} onClick={() => handleAbsagen(k)}>Absagen</button>
+                  {' '}<button style={s.btnSmall} onClick={() => openEdit(k)}>Bearbeiten</button>
+                  {' '}<button style={{ ...s.btnSmall, ...s.btnWarning }} onClick={() => handleAbsagen(k)}>Absagen</button>
                 </>}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {buchungsModal && <TeilnehmerModal kurstermin={buchungsModal} onClose={() => { setBuchungsModal(null); load() }} />}
       {modal && (
         <div style={s.overlay} onClick={e => e.target === e.currentTarget && setModal(null)}>
           <div style={s.modalBox}>
@@ -262,6 +265,93 @@ function KursplanungTab() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Teilnehmerliste Modal ─────────────────────────────────────────────────────
+
+function TeilnehmerModal({ kurstermin, onClose }) {
+  const [buchungen, setBuchungen] = useState([])
+  const [mitglieder, setMitglieder] = useState([])
+  const [neuesMitgliedId, setNeuesMitgliedId] = useState('')
+  const [buchungError, setBuchungError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    load()
+    api.get('/mitglieder').then(setMitglieder)
+  }, [kurstermin.id])
+
+  function load() { api.get(`/buchungen?kurstermin_id=${kurstermin.id}`).then(setBuchungen) }
+
+  async function handleBuchen(e) {
+    e.preventDefault(); setBuchungError(''); setLoading(true)
+    try {
+      await api.post('/buchungen', { mitglied_id: Number(neuesMitgliedId), kurstermin_id: kurstermin.id })
+      setNeuesMitgliedId(''); load()
+    } catch (err) { setBuchungError(err.message) }
+    finally { setLoading(false) }
+  }
+
+  async function handleStorno(id) {
+    if (!confirm('Buchung stornieren?')) return
+    try { await api.put(`/buchungen/${id}/stornieren`, {}); load() } catch (err) { alert(err.message) }
+  }
+
+  const bereitsGebucht = new Set(buchungen.filter(b => !b.storniert_am).map(b => b.mitglied_id))
+  const buchbareMitglieder = mitglieder.filter(m => !bereitsGebucht.has(m.id))
+  const aktiveCount = buchungen.filter(b => !b.storniert_am).length
+  const s = styles
+
+  return (
+    <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ ...s.modalBox, width: 640 }}>
+        <h2 style={s.modalTitle}>
+          {kurstermin.kurstyp_name} — {formatDt(kurstermin.datum_zeit)}
+          <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.9rem', marginLeft: 12 }}>
+            {aktiveCount} / {kurstermin.kapazitaet} Plätze
+          </span>
+        </h2>
+
+        <table style={s.table}>
+          <thead><tr>{['Mitglied', 'Tarif', 'Gebucht am', 'Erschienen', ''].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {buchungen.length === 0 && <tr><td colSpan={5} style={s.empty}>Noch keine Buchungen</td></tr>}
+            {buchungen.map(b => (
+              <tr key={b.id} style={{ ...s.tr, opacity: b.storniert_am ? 0.45 : 1 }}>
+                <td style={s.td}>
+                  <strong>{b.mitglied_name}</strong>
+                  {b.storniert_am && <span style={{ color: '#9ca3af', fontSize: '0.8rem', marginLeft: 6 }}>(storniert)</span>}
+                </td>
+                <td style={s.td}>{b.tarif_name ?? '—'}</td>
+                <td style={s.td}>{formatDt(b.gebucht_am)}</td>
+                <td style={s.td}>
+                  {b.erschienen === 1 ? '✓ erschienen' : b.erschienen === 0 ? '✗ No-Show' : '—'}
+                </td>
+                <td style={s.td}>
+                  {!b.storniert_am && <button style={{ ...s.btnSmall, ...s.btnDanger }} onClick={() => handleStorno(b.id)}>Storno</button>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {kurstermin.status === 'geplant' && (
+          <form onSubmit={handleBuchen} style={{ marginTop: '1.25rem', display: 'flex', gap: 8 }}>
+            <select style={{ ...s.input, flex: 1 }} value={neuesMitgliedId} onChange={e => setNeuesMitgliedId(e.target.value)} required>
+              <option value="">— Mitglied hinzufügen —</option>
+              {buchbareMitglieder.map(m => <option key={m.id} value={m.id}>{m.name}{m.tarif_name ? ` (${m.tarif_name})` : ''}</option>)}
+            </select>
+            <button type="submit" style={s.btnPrimary} disabled={loading}>{loading ? '…' : 'Buchen'}</button>
+          </form>
+        )}
+        {buchungError && <p style={s.error}>{buchungError}</p>}
+
+        <div style={{ ...s.modalActions, marginTop: '1rem' }}>
+          <button style={s.btnSecondary} onClick={onClose}>Schließen</button>
+        </div>
+      </div>
     </div>
   )
 }
