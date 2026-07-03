@@ -1,5 +1,6 @@
 const express = require('express')
 const db = require('../db/client')
+const { advanceWaitlist } = require('../services/advance')
 const router = express.Router()
 
 const WITH_MEMBER = `
@@ -71,7 +72,13 @@ router.post('/', (req, res) => {
 
   const booked = db.prepare('SELECT COUNT(*) as n FROM buchung WHERE kurstermin_id = ? AND storniert_am IS NULL').get(kurstermin_id).n
   if (booked >= session.kapazitaet) {
-    return res.status(409).json({ error: 'Kurs ist voll', code: 'kurs_voll' })
+    const alreadyWaiting = db.prepare('SELECT id FROM warteliste WHERE mitglied_id = ? AND kurstermin_id = ?').get(mitglied_id, kurstermin_id)
+    if (alreadyWaiting) return res.status(409).json({ error: 'Mitglied steht bereits auf der Warteliste', code: 'bereits_warteliste' })
+    const wlCount = db.prepare('SELECT COUNT(*) as n FROM warteliste WHERE kurstermin_id = ?').get(kurstermin_id).n
+    if (wlCount >= 5) return res.status(409).json({ error: 'Kurs ist voll und Warteliste ist voll (max. 5)', code: 'warteliste_voll' })
+    const position = wlCount + 1
+    const wlResult = db.prepare('INSERT INTO warteliste (mitglied_id, kurstermin_id, position, eingetragen_am) VALUES (?, ?, ?, ?)').run(mitglied_id, kurstermin_id, position, new Date().toISOString())
+    return res.status(201).json({ id: Number(wlResult.lastInsertRowid), waitlist: true, position })
   }
 
   if (cancelled) {
@@ -84,11 +91,12 @@ router.post('/', (req, res) => {
 })
 
 router.put('/:id/stornieren', (req, res) => {
-  const b = db.prepare('SELECT id, storniert_am FROM buchung WHERE id = ?').get(req.params.id)
+  const b = db.prepare('SELECT id, storniert_am, kurstermin_id FROM buchung WHERE id = ?').get(req.params.id)
   if (!b) return res.status(404).json({ error: 'Buchung nicht gefunden' })
   if (b.storniert_am) return res.status(409).json({ error: 'Buchung wurde bereits storniert' })
   // 2h-Frist und Stornogebühr: FZ-007
   db.prepare('UPDATE buchung SET storniert_am=? WHERE id=?').run(new Date().toISOString(), req.params.id)
+  advanceWaitlist(b.kurstermin_id)
   res.json({ ok: true })
 })
 

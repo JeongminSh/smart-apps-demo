@@ -145,6 +145,24 @@ Flat: `/api/v1/mitgliedschaften` als eigenständiger Router.
 
 ---
 
+## 2026-07-03 — Warteliste: auto-enqueue in POST /buchungen, advanceWaitlist bei Storno (FZ-004)
+
+**Kontext:** SPEC §3 Regel 1: "Kurs voll → Mitglied kommt automatisch auf Warteliste". Entscheidung: Wohin gehört die Wartelisten-Logik — eigener Endpunkt oder integriert in POST /buchungen?
+
+### Entscheidung
+POST /buchungen prüft Kapazität zuletzt; wenn voll → fügt automatisch in `warteliste` ein statt 409 zurückzugeben. Antwort: 201 `{ waitlist: true, position: N }`. Frontend erkennt `waitlist: true` und zeigt grüne Meldung. Beim Storno (PUT /buchungen/:id/stornieren) wird `advanceWaitlist(kurstermin_id)` in `server/services/advance.js` aufgerufen — bucht Position-1-Eintrag, löscht ihn aus Warteliste, re-nummeriert restliche Positionen, sendet Email via `mail.js#sendNachruecken`. Kein Retry bei fehlender Mitgliedschaft/Sperre in v1 — Admin löst Ausnahmen manuell.
+
+### Alternativen verworfen
+- Warteliste nur manuell via POST /warteliste: SPEC sagt "automatisch", d.h. kein extra Klick für den Admin
+- Trennung: 409 bei vollem Kurs, Frontend ruft dann POST /warteliste: ein Extra-Request, mehr Frontend-Logik ohne Gewinn
+- advanceWaitlist in eigenem Scheduler/Cron: unnötige Komplexität — Trigger bei Storno ist der natürliche Moment
+
+### Konsequenzen
+- Positiv: SPEC-konformes Verhalten; kein manueller Schritt; re-numbering hält Positionen konsistent
+- Risiko: Position-1-Person könnte inzwischen gesperrt/gekündigt sein → Nachrücken schlägt still fehl, verbleibt auf Warteliste — in v1 akzeptiert
+
+---
+
 ## 2026-07-03 — Buchungsvalidierung: Reihenfolge und Tarif-Limit-Granularität (FZ-003)
 
 **Kontext:** POST /buchungen muss mehrere Validierungsschritte durchlaufen (Termin existiert, Mitglied existiert, Sperre, Mitgliedschaftsstatus, Duplikat, Tarif-Limit, Kapazität). Reihenfolge und Fehlermeldungen sind UX-relevant.

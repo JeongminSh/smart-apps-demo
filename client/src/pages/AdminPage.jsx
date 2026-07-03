@@ -273,9 +273,10 @@ function KursplanungTab() {
 
 function TeilnehmerModal({ kurstermin, onClose }) {
   const [buchungen, setBuchungen] = useState([])
+  const [warteliste, setWarteliste] = useState([])
   const [mitglieder, setMitglieder] = useState([])
   const [neuesMitgliedId, setNeuesMitgliedId] = useState('')
-  const [buchungError, setBuchungError] = useState('')
+  const [buchungMsg, setBuchungMsg] = useState(null)  // { text, ok }
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -283,14 +284,21 @@ function TeilnehmerModal({ kurstermin, onClose }) {
     api.get('/mitglieder').then(setMitglieder)
   }, [kurstermin.id])
 
-  function load() { api.get(`/buchungen?kurstermin_id=${kurstermin.id}`).then(setBuchungen) }
+  function load() {
+    api.get(`/buchungen?kurstermin_id=${kurstermin.id}`).then(setBuchungen)
+    api.get(`/warteliste?kurstermin_id=${kurstermin.id}`).then(setWarteliste)
+  }
 
   async function handleBuchen(e) {
-    e.preventDefault(); setBuchungError(''); setLoading(true)
+    e.preventDefault(); setBuchungMsg(null); setLoading(true)
     try {
-      await api.post('/buchungen', { mitglied_id: Number(neuesMitgliedId), kurstermin_id: kurstermin.id })
-      setNeuesMitgliedId(''); load()
-    } catch (err) { setBuchungError(err.message) }
+      const result = await api.post('/buchungen', { mitglied_id: Number(neuesMitgliedId), kurstermin_id: kurstermin.id })
+      setNeuesMitgliedId('')
+      if (result.waitlist) {
+        setBuchungMsg({ text: `Kurs voll — auf Warteliste gesetzt (Position ${result.position})`, ok: true })
+      }
+      load()
+    } catch (err) { setBuchungMsg({ text: err.message, ok: false }) }
     finally { setLoading(false) }
   }
 
@@ -299,14 +307,20 @@ function TeilnehmerModal({ kurstermin, onClose }) {
     try { await api.put(`/buchungen/${id}/stornieren`, {}); load() } catch (err) { alert(err.message) }
   }
 
+  async function handleWlEntfernen(id) {
+    if (!confirm('Von Warteliste entfernen?')) return
+    try { await api.delete(`/warteliste/${id}`); load() } catch (err) { alert(err.message) }
+  }
+
   const bereitsGebucht = new Set(buchungen.filter(b => !b.storniert_am).map(b => b.mitglied_id))
-  const buchbareMitglieder = mitglieder.filter(m => !bereitsGebucht.has(m.id))
+  const bereitsAufWl = new Set(warteliste.map(w => w.mitglied_id))
+  const buchbareMitglieder = mitglieder.filter(m => !bereitsGebucht.has(m.id) && !bereitsAufWl.has(m.id))
   const aktiveCount = buchungen.filter(b => !b.storniert_am).length
   const s = styles
 
   return (
     <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ ...s.modalBox, width: 640 }}>
+      <div style={{ ...s.modalBox, width: 660 }}>
         <h2 style={s.modalTitle}>
           {kurstermin.kurstyp_name} — {formatDt(kurstermin.datum_zeit)}
           <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.9rem', marginLeft: 12 }}>
@@ -337,6 +351,29 @@ function TeilnehmerModal({ kurstermin, onClose }) {
           </tbody>
         </table>
 
+        {warteliste.length > 0 && (
+          <div style={{ marginTop: '1.25rem' }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+              Warteliste ({warteliste.length}/5)
+            </h3>
+            <table style={s.table}>
+              <thead><tr>{['Pos.', 'Mitglied', 'Eingetragen am', ''].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {warteliste.map(w => (
+                  <tr key={w.id} style={s.tr}>
+                    <td style={{ ...s.td, fontWeight: 700, width: 40 }}>{w.position}</td>
+                    <td style={s.td}>{w.mitglied_name}</td>
+                    <td style={s.td}>{formatDt(w.eingetragen_am)}</td>
+                    <td style={s.td}>
+                      <button style={{ ...s.btnSmall, ...s.btnDanger }} onClick={() => handleWlEntfernen(w.id)}>Entfernen</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {kurstermin.status === 'geplant' && (
           <form onSubmit={handleBuchen} style={{ marginTop: '1.25rem', display: 'flex', gap: 8 }}>
             <select style={{ ...s.input, flex: 1 }} value={neuesMitgliedId} onChange={e => setNeuesMitgliedId(e.target.value)} required>
@@ -346,7 +383,11 @@ function TeilnehmerModal({ kurstermin, onClose }) {
             <button type="submit" style={s.btnPrimary} disabled={loading}>{loading ? '…' : 'Buchen'}</button>
           </form>
         )}
-        {buchungError && <p style={s.error}>{buchungError}</p>}
+        {buchungMsg && (
+          <p style={{ ...s.error, color: buchungMsg.ok ? '#059669' : '#dc2626', background: buchungMsg.ok ? '#f0fdf4' : '#fef2f2' }}>
+            {buchungMsg.text}
+          </p>
+        )}
 
         <div style={{ ...s.modalActions, marginTop: '1rem' }}>
           <button style={s.btnSecondary} onClick={onClose}>Schließen</button>
