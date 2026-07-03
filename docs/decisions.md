@@ -41,6 +41,54 @@ Multi-Standort ist kein Feature in v1. FZ-017 = killed.
 
 ---
 
+## 2026-07-03 — Kurstyp nach Anlage eines Kurstermins nicht mehr änderbar (FZ-002)
+
+**Kontext:** Im Bearbeiten-Modal für einen Kurstermin wäre ein Kurstyp-Wechsel technisch möglich, würde aber Inkonsistenz erzeugen: die gebuchten Mitglieder haben einen Yoga-Termin gebucht, nicht Spinning. Die Trainer-Qualifikationsfilterung würde ebenfalls nicht mehr passen.
+
+### Entscheidung
+`PUT /api/v1/kurstermine/:id` akzeptiert kein `kurstyp_id`-Feld. Das Bearbeiten-Modal zeigt den Kurstyp read-only an. Bei einem Fehler (falscher Kurstyp gewählt) muss der Termin abgesagt und neu angelegt werden.
+
+### Alternativen verworfen
+- Kurstyp editierbar + Warnung: zu viel Sonderfalllogik für einen seltenen Admin-Fehler
+
+### Konsequenzen
+- Positiv: keine Daten-Inkonsistenz bei bestehenden Buchungen
+- Negativ: Admin muss bei Fehler neu anlegen — vertretbar, da Kurstyp das erste Pflichtfeld ist
+
+---
+
+## 2026-07-03 — Trainer-Kurstyp-Zuweisung als Replace-All bei PUT (FZ-002)
+
+**Kontext:** Beim Bearbeiten eines Trainers werden seine Qualifikationen (trainer_kurstyp) neu gesetzt. Entweder: diff + patch (nur Änderungen), oder: delete all + re-insert.
+
+### Entscheidung
+Delete all + re-insert: `DELETE FROM trainer_kurstyp WHERE trainer_id = ?` gefolgt von Einzel-Inserts der neuen kurstyp_ids.
+
+### Alternativen verworfen
+- Diff-Patch (nur geänderte Zeilen): mehr Code, kein messbarer Vorteil bei dieser Datenmenge
+
+### Konsequenzen
+- Positiv: einfach, atomar, kein Drift zwischen UI-State und DB möglich
+- Risiko: bei Netzwerkfehler zwischen DELETE und INSERT sind alle Qualifikationen weg — in v1 akzeptiert, kein Transaktionsschutz nötig (kurze synchrone Operation)
+
+---
+
+## 2026-07-03 — AdminPage als Single-File mit inline Tab-Komponenten (FZ-002)
+
+**Kontext:** AdminPage wächst mit Tab-Navigation (Mitglieder, Kursplanung, Stammdaten). Entscheidung: separate Dateien pro Tab oder alles in AdminPage.jsx?
+
+### Entscheidung
+Alles in `AdminPage.jsx` (~300 Zeilen): MitgliederTab, KursplanungTab, StammdatenTab + KurstypenSection + TrainerSection als lokale Funktionskomponenten. Gemeinsame Helpers (Field, StatusBadge, styles) am Ende der Datei.
+
+### Alternativen verworfen
+- Separate Dateien pro Tab: mehr Import-Graph, keine echte Wiederverwendung der Tabs (sind Admin-only, keine Routen)
+
+### Konsequenzen
+- Positiv: eine Datei zu lesen/ändern für den gesamten Admin-Bereich
+- Risiko: Datei wächst mit weiteren Admin-Features — falls >500 Zeilen, Aufteilung überdenken
+
+---
+
 ## 2026-07-03 — Hard Delete mit Kaskade statt Soft Delete (FZ-001)
 
 **Kontext:** SPEC §3 Regel sagt "Historie bleibt erhalten auch nach Kündigung" — das bezieht sich aber auf die Kündigung (FZ-013, Mitgliedschaft-Status wird auf `gekündigt` gesetzt). Der Admin braucht trotzdem einen Weg, Datensätze vollständig zu löschen: Testdaten, DSGVO-Löschanfragen.
