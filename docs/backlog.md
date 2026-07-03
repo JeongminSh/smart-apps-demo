@@ -29,7 +29,7 @@ _Stabile Feature-IDs. Nicht umnummerieren. Killed-IDs bleiben killed._
 
 | ID | Name | Phase | Status | Quelle | Notiz |
 |----|------|-------|--------|--------|-------|
-| FZ-001 | Mitgliederverwaltung (CRUD + Tarife) | 1 | done | SPEC.md §1, §3 | CRUD + Tarif-Zuweisung; routes: mitglieder/mitgliedschaften/tarife; AdminPage; commit: pending |
+| FZ-001 | Mitgliederverwaltung (CRUD + Tarife) | 1 | done | SPEC.md §1, §3 | CRUD + Tarif-Zuweisung; routes: mitglieder/mitgliedschaften/tarife; AdminPage; commit: e0982fb |
 | FZ-002 | Kursplanung durch Admin | 1 | validated | SPEC.md §3 Regel 16 | Lisa erstellt Kurstermine monatlich |
 | FZ-003 | Buchungsverwaltung | 1 | validated | SPEC.md §5 Prio 1 | Wer hat gebucht; Tarif-Limit prüfen |
 | FZ-004 | Warteliste mit automatischem Nachrücken | 1 | validated | SPEC.md §5 Prio 2 | Max. 5 Plätze; Push/SMS bei Nachrücken |
