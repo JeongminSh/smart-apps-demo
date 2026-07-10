@@ -34,7 +34,7 @@ _Stabile Feature-IDs. Nicht umnummerieren. Killed-IDs bleiben killed._
 | FZ-003 | Buchungsverwaltung | 1 | done | SPEC.md §5 Prio 1 | Validierung (Sperre/Tarif-Limit/Kapazität/Status); Teilnehmerliste; api.js Fehlermeldungen; commit: 9427c9b |
 | FZ-004 | Warteliste mit automatischem Nachrücken | 1 | done | SPEC.md §5 Prio 2 | Auto-Enqueue bei vollem Kurs; advanceWaitlist bei Storno; Email via mail.js; re-numbering; commit: d4ba6bf |
 | FZ-005 | No-Show-Tracking + Buchungssperre | 1 | done | SPEC.md §5 Prio 3 | Check-in/No-Show-Buttons in TeilnehmerModal; noshow.js sperrt bei 3x in Folge; sperre.js hebt Sperre stündlich automatisch auf + Email; commit: 5c02f0e |
-| FZ-006 | Studio-Onboarding (Tablet + SEPA + Welcome-Email) | 1 | done | SPEC.md §5 Prio 4 | Neue Route POST /api/v1/onboarding (Mitglied+Mitgliedschaft+SEPA-Mandat atomar); MitgliedPage.jsx als Tablet-Kiosk-Formular; sendWillkommen |
+| FZ-006 | Studio-Onboarding (Tablet + SEPA + Welcome-Email) | 1 | done | SPEC.md §5 Prio 4 | Neue Route POST /api/v1/onboarding (Mitglied+Mitgliedschaft+SEPA-Mandat atomar); MitgliedPage.jsx als Tablet-Kiosk-Formular; sendWillkommen; commit: 4abbd67 |
 | FZ-007 | Automatische Stornogebühr beim SEPA-Einzug | 1 | validated | SPEC.md §5 Prio 5 | 50%-Gebühr bei <2h Storno; kein eigener Payment-Record |
 | FZ-008 | SEPA-Monatseinzug | 1 | validated | SPEC.md §3 Regel 20 | Automatisch; Stornogebühr addiert |
 | FZ-009 | Trainer-Zugang (Termine + Teilnehmerliste + Check-in) | 1 | validated | SPEC.md §1 Trainer | Kein Zugriff auf Zahlungen/Gehälter/volle Kontaktdaten |
