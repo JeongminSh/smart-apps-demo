@@ -315,6 +315,55 @@ Neue Route `GET /trainer/:id/kurstermine/:kursterminId/teilnehmer`: prüft zuers
 
 ---
 
+## 2026-07-10 — "3 Monate" Pause = 90 Tage (Annahme, nicht mit Lisa geklärt) (FZ-012)
+
+**Kontext:** SPEC Regel 22 sagt "max. 3 Monate pro Kalenderjahr (kumulativ)", aber das Schema (`mitgliedschaft.pause_tage_jahr`, schon vor dieser Session angelegt) zählt in Tagen, nicht in Monaten. Anders als beim Plus-Tarif-Limit ist diese Ambiguität nicht in `#SPEC.md §6` als offene Frage vermerkt — Lisa hält "3 Monate" offenbar für eindeutig genug, nur die exakte Tageszahl ist technische Übersetzungsarbeit.
+
+### Entscheidung
+3 Monate = 90 Tage, als Konstante `PAUSE_TAGE_MAX` in `mitgliedschaften.js`. Kumulativ heißt: Summe aller Pausentage mit `pause_von` im selben Kalenderjahr darf 90 nicht überschreiten.
+
+### Alternativen verworfen
+- Exakte Kalendermonate zählen (z.B. 3× 30/31/28 Tage je nach Startmonat): unnötig kompliziert für einen internen Cap-Wert, den SPEC selbst nur als groben Rahmen nennt
+- Vor Implementierung bei Lisa nachfragen: SPEC §6 listet diese Frage nicht als offen — im Gegensatz zum Plus-Tarif-Limit, wo explizit "Zahl noch offen" vermerkt ist. Eine Rückfrage für einen bereits als klar behandelten Wert hätte den Fortschritt unnötig blockiert
+
+### Konsequenzen
+- Positiv: Feature ist nutzbar, Grenze ist im Code an einer Stelle änderbar, falls Lisa einen anderen genauen Wert nennt
+- Risiko: falls Lisa tatsächlich eine andere Zahl im Kopf hat (z.B. 92 oder exakt kalendarische Monate), muss `PAUSE_TAGE_MAX` angepasst werden — wie beim Plus-Tarif-Limit als Gotcha in `CLAUDE.md` vermerkt
+
+---
+
+## 2026-07-10 — Kumulatives Jahreslimit ohne neue Jahres-Spalte: pause_von als impliziter Jahresmarker (FZ-012)
+
+**Kontext:** `pause_tage_jahr` muss sich jedes Kalenderjahr zurücksetzen, aber eine Mitgliedschaft-Zeile kann über mehrere Jahre hinweg bestehen (kein Tarifwechsel = keine neue Zeile), und es gibt keine separate Pause-Historientabelle.
+
+### Entscheidung
+Kein neues `pause_jahr`-Feld. Stattdessen: beim Prüfen eines neuen Pausenantrags wird `pause_tage_jahr` nur dann als "bereits verwendet" gezählt, wenn das gespeicherte `pause_von` (die letzte Pause) im selben Kalenderjahr liegt wie das neue `pause_von`. Liegt die letzte Pause in einem Vorjahr, gilt der Zähler implizit als 0.
+
+### Alternativen verworfen
+- Zusätzliche Spalte `pause_jahr`: hätte funktioniert, aber `pause_von` trägt dieselbe Information bereits redundant in sich — eine weitere Spalte nur für Buchhaltung ohne zusätzlichen Nutzen
+
+### Konsequenzen
+- Positiv: keine Schema-Migration nötig (im Gegensatz zu FZ-007); Reset "passiert von selbst" beim ersten Pausenantrag im neuen Jahr
+- Risiko: Wird eine Mitgliedschaft z.B. 2027 pausiert und 2028 nie wieder, bleibt `pause_von` für immer auf 2027 stehen — kein Problem, da ein neuer Antrag ohnehin neu berechnet; rein informativ angezeigte Restanzeige im Admin-UI könnte in diesem Rand-fall leicht veraltet wirken, ist aber unkritisch
+
+---
+
+## 2026-07-10 — Vorzeitig beendete Pause: keine Rückerstattung der geplanten Tage (FZ-012)
+
+**Kontext:** Wenn eine Pause z.B. für 30 Tage angelegt, aber nach 10 Tagen per "Fortsetzen" beendet wird — sollen die restlichen 20 Tage wieder gutgeschrieben werden?
+
+### Entscheidung
+Nein. `pause_tage_jahr` wird beim Anlegen der Pause in voller geplanter Länge gebucht und bei vorzeitiger Beendigung nicht neu berechnet.
+
+### Alternativen verworfen
+- Tatsächlich genutzte Tage nachträglich berechnen: erfordert zusätzliche Logik beim Beenden (heutiges Datum vs. geplantes `pause_bis`) für einen Fall, den Lisa laut SPEC nicht als Anforderung genannt hat
+
+### Konsequenzen
+- Positiv: einfache, vorhersagbare Buchführung — "gebucht ist gebucht"
+- Risiko: in seltenen Fällen etwas strenger als nötig gegenüber dem Mitglied — akzeptiert für v1
+
+---
+
 ## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
 
 **Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.

@@ -5,6 +5,7 @@ const router = express.Router()
 const WITH_TARIF = `
   SELECT m.*, ms.id as mitgliedschaft_id, ms.status as ms_status,
          ms.tarif_id, ms.start_datum as ms_start_datum,
+         ms.pause_von, ms.pause_bis, ms.pause_tage_jahr,
          t.name as tarif_name, t.preis as tarif_preis
   FROM mitglied m
   LEFT JOIN mitgliedschaft ms ON ms.id = (

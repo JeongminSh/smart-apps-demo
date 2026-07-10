@@ -46,6 +46,9 @@ function MitgliederTab() {
   const [form, setForm] = useState(EMPTY_MITGLIED)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pauseModal, setPauseModal] = useState(null)
+  const [pauseForm, setPauseForm] = useState({ pause_von: TODAY, pause_bis: '' })
+  const [pauseError, setPauseError] = useState('')
 
   useEffect(() => { load(); api.get('/tarife').then(setTarife) }, [])
   function load() { api.get('/mitglieder').then(setMitglieder) }
@@ -81,6 +84,21 @@ function MitgliederTab() {
     try { await api.delete(`/mitglieder/${id}`); load() } catch (err) { alert(err.message) }
   }
 
+  function openPause(m) { setPauseForm({ pause_von: TODAY, pause_bis: '' }); setPauseError(''); setPauseModal(m) }
+
+  async function handlePausieren(e) {
+    e.preventDefault(); setPauseError('')
+    try {
+      await api.put(`/mitgliedschaften/${pauseModal.mitgliedschaft_id}/pausieren`, pauseForm)
+      setPauseModal(null); load()
+    } catch (err) { setPauseError(err.message) }
+  }
+
+  async function handleFortsetzen(m) {
+    if (!confirm(`Pause für "${m.name}" vorzeitig beenden?`)) return
+    try { await api.put(`/mitgliedschaften/${m.mitgliedschaft_id}/fortsetzen`, {}); load() } catch (err) { alert(err.message) }
+  }
+
   const s = styles
   return (
     <div style={s.page}>
@@ -97,13 +115,18 @@ function MitgliederTab() {
               <td style={s.td}><strong>{m.name}</strong></td>
               <td style={s.td}>{m.email}</td>
               <td style={s.td}>{m.tarif_name ? <span style={s.tarifBadge}>{m.tarif_name} · {m.tarif_preis}€</span> : <span style={{ color: '#9ca3af' }}>—</span>}</td>
-              <td style={s.td}><StatusBadge status={m.ms_status} /></td>
+              <td style={s.td}>
+                <StatusBadge status={m.ms_status} />
+                {m.ms_status === 'pausiert' && <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: 2 }}>bis {m.pause_bis}</div>}
+              </td>
               <td style={s.td}>{m.no_show_zaehler}</td>
               <td style={s.td}>{m.gesperrt_bis ?? '—'}</td>
               <td style={s.td}>{m.offene_stornogebuehr > 0 ? `${m.offene_stornogebuehr.toFixed(2)}€` : '—'}</td>
               <td style={s.td}>
                 <button style={s.btnSmall} onClick={() => openEdit(m)}>Bearbeiten</button>{' '}
-                <button style={{ ...s.btnSmall, ...s.btnDanger }} onClick={() => handleDelete(m.id, m.name)}>Löschen</button>
+                {m.ms_status === 'aktiv' && <button style={s.btnSmall} onClick={() => openPause(m)}>Pausieren</button>}
+                {m.ms_status === 'pausiert' && <button style={s.btnSmall} onClick={() => handleFortsetzen(m)}>Fortsetzen</button>}
+                {' '}<button style={{ ...s.btnSmall, ...s.btnDanger }} onClick={() => handleDelete(m.id, m.name)}>Löschen</button>
               </td>
             </tr>
           ))}
@@ -138,6 +161,27 @@ function MitgliederTab() {
               <div style={s.modalActions}>
                 <button type="button" style={s.btnSecondary} onClick={() => setModal(null)}>Abbrechen</button>
                 <button type="submit" style={s.btnPrimary} disabled={loading}>{loading ? 'Speichern…' : 'Speichern'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {pauseModal && (
+        <div style={s.overlay} onClick={e => e.target === e.currentTarget && setPauseModal(null)}>
+          <div style={s.modalBox}>
+            <h2 style={s.modalTitle}>Mitgliedschaft pausieren — {pauseModal.name}</h2>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '-0.5rem 0 1rem' }}>
+              Max. 90 Tage (3 Monate) pro Kalenderjahr, kumulativ. Bisher genutzt in {new Date(pauseForm.pause_von).getFullYear()}: {
+                pauseModal.pause_von && new Date(pauseModal.pause_von).getFullYear() === new Date(pauseForm.pause_von).getFullYear() ? pauseModal.pause_tage_jahr : 0
+              } Tage.
+            </p>
+            <form onSubmit={handlePausieren}>
+              <Field label="Von *" type="date" value={pauseForm.pause_von} onChange={v => setPauseForm(f => ({ ...f, pause_von: v }))} required />
+              <Field label="Bis *" type="date" value={pauseForm.pause_bis} onChange={v => setPauseForm(f => ({ ...f, pause_bis: v }))} required />
+              {pauseError && <p style={s.error}>{pauseError}</p>}
+              <div style={s.modalActions}>
+                <button type="button" style={s.btnSecondary} onClick={() => setPauseModal(null)}>Abbrechen</button>
+                <button type="submit" style={s.btnPrimary}>Pausieren</button>
               </div>
             </form>
           </div>

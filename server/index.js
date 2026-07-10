@@ -14,6 +14,7 @@ const zahlungenRouter = require('./routes/zahlungen')
 const onboardingRouter = require('./routes/onboarding')
 const { checkAbgelaufeneSperren } = require('./services/sperre')
 const { pruefeMonatseinzug } = require('./services/monatseinzug')
+const { checkAbgelaufenePausen } = require('./services/pause')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -43,3 +44,7 @@ setInterval(checkAbgelaufeneSperren, 60 * 60 * 1000)
 // FZ-008: Monatsbeitrag läuft automatisch per SEPA (idempotent, siehe monatseinzug.js)
 pruefeMonatseinzug()
 setInterval(pruefeMonatseinzug, 60 * 60 * 1000)
+
+// FZ-012: Pause endet automatisch zum hinterlegten Bis-Datum
+checkAbgelaufenePausen()
+setInterval(checkAbgelaufenePausen, 60 * 60 * 1000)

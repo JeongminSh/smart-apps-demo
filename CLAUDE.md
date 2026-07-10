@@ -45,3 +45,4 @@ Kursbuchungs- und Mitgliederverwaltung für FitZone (Lisa Sommer). Löst drei t�
 - Premium hat noch einen unbekannten weiteren Vorteil → explizit nicht implementieren, bis Lisa es kommuniziert
 - Warteliste max. 5 Plätze — nicht konfigurierbar in v1
 - Stornogebühr: kein eigener Payment-Record, wird beim nächsten SEPA-Einzug addiert
+- Pausieren: "3 Monate" als 90 Tage interpretiert (`PAUSE_TAGE_MAX` in mitgliedschaften.js) — nicht mit Lisa verifiziert, da SPEC §6 dies nicht als offene Frage listet
