@@ -1,5 +1,6 @@
 const express = require('express')
 const db = require('../db/client')
+const { berechneKuendigungsEnddatum } = require('../services/kuendigung')
 const router = express.Router()
 
 router.post('/', (req, res) => {
@@ -54,6 +55,19 @@ router.put('/:id/fortsetzen', (req, res) => {
 
   db.prepare("UPDATE mitgliedschaft SET status='aktiv' WHERE id=?").run(req.params.id)
   res.json({ ok: true })
+})
+
+// SPEC §3 Regel 24-26: 4 Wochen zum Monatsende, bestehende Buchungen bleiben bis
+// end_datum gültig, danach automatisch kein Zugang mehr (Gate in buchungen.js).
+// Status bleibt dauerhaft 'gekündigt' — Historie bleibt erhalten (siehe decisions.md).
+router.put('/:id/kuendigen', (req, res) => {
+  const current = db.prepare('SELECT * FROM mitgliedschaft WHERE id = ?').get(req.params.id)
+  if (!current) return res.status(404).json({ error: 'Nicht gefunden' })
+  if (current.status !== 'aktiv') return res.status(409).json({ error: 'Nur aktive Mitgliedschaften können gekündigt werden' })
+
+  const end_datum = berechneKuendigungsEnddatum(new Date().toISOString().slice(0, 10))
+  db.prepare("UPDATE mitgliedschaft SET status='gekündigt', end_datum=? WHERE id=?").run(end_datum, req.params.id)
+  res.json({ ok: true, end_datum })
 })
 
 module.exports = router

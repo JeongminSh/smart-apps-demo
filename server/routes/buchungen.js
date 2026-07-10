@@ -50,8 +50,15 @@ router.post('/', (req, res) => {
   if (membership?.status === 'pausiert') {
     return res.status(409).json({ error: 'Mitgliedschaft ist pausiert — keine Buchungen möglich', code: 'pausiert' })
   }
+  // SPEC Regel 25: bestehende Buchungen bleiben bis Ablauf der Kündigungsfrist gültig,
+  // Zugang (auch für neue Buchungen) gilt bis einschließlich end_datum, danach automatisch weg.
   if (membership?.status === 'gekündigt') {
-    return res.status(409).json({ error: 'Mitgliedschaft ist gekündigt', code: 'gekündigt' })
+    if (!membership.end_datum || today > membership.end_datum) {
+      return res.status(409).json({ error: `Mitgliedschaft ist zum ${membership.end_datum ?? '?'} gekündigt — kein Zugang mehr`, code: 'gekündigt' })
+    }
+    if (session.datum_zeit.slice(0, 10) > membership.end_datum) {
+      return res.status(409).json({ error: `Kurstermin liegt nach Ende der Mitgliedschaft (${membership.end_datum})`, code: 'gekündigt' })
+    }
   }
 
   const duplicate = db.prepare('SELECT id FROM buchung WHERE mitglied_id = ? AND kurstermin_id = ? AND storniert_am IS NULL').get(mitglied_id, kurstermin_id)

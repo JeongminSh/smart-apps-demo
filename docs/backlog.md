@@ -41,7 +41,7 @@ _Stabile Feature-IDs. Nicht umnummerieren. Killed-IDs bleiben killed._
 | FZ-010 | Kursabsage mit automatischer Benachrichtigung | 1 | done | SPEC.md §3 Regel 17 | absage.js benachrichtigt bei PUT /kurstermine/:id/absagen alle aktiven (nicht stornierten) Buchungen per sendKursabsage; UI-Button existierte bereits, nur Notification-TODO nachgetragen; commit: 0283dfe |
 | FZ-011 | Online-Kurs Zoom-Link-Verteilung | 1 | done | SPEC.md §3 Regel 27 | zoomlink.js sendet bei Online-Kursterminen mit zoom_link automatisch an POST /buchungen (direkt + reaktiviert) und advanceWaitlist (Nachrücker); Studio-Kurse unberührt; commit: affb4fb |
 | FZ-012 | Mitgliedschaft pausieren | 1 | done | SPEC.md §3 Regel 22–23 | PUT /mitgliedschaften/:id/pausieren (90-Tage-Kumulativlimit/Kalenderjahr) + /fortsetzen; pause.js beendet abgelaufene Pausen automatisch; Pausieren/Fortsetzen-UI in MitgliederTab; Buchungssperre + SEPA-Ausschluss waren bereits vorhanden; commit: 8c860bc |
-| FZ-013 | Mitgliedschaft kündigen + Zugang-Deaktivierung | 1 | validated | SPEC.md §3 Regel 24–26 | 4 Wochen zum Monatsende; auto Deaktivierung |
+| FZ-013 | Mitgliedschaft kündigen + Zugang-Deaktivierung | 1 | done | SPEC.md §3 Regel 24–26 | kuendigung.js berechnet 4-Wochen-zum-Monatsende-Enddatum; PUT /mitgliedschaften/:id/kuendigen; buchungen.js gated auf end_datum statt pauschal auf Status (Zugang bleibt bis Fristende aktiv); Kündigen-Button in MitgliederTab |
 | FZ-014 | QR-Code Check-in | 2 | hypo | SPEC.md §5 Nice-to-have | v2+, nach stabilem Betrieb |
 | FZ-015 | Admin-Auslastungsübersicht | 2 | hypo | SPEC.md §5 Nice-to-have | v2+ |
 | FZ-016 | Tagespass / Probeabo für Nicht-Mitglieder | 2 | hypo | SPEC.md §5 Nice-to-have | v2+ |

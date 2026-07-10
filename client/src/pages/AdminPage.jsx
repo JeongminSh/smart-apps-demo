@@ -99,6 +99,15 @@ function MitgliederTab() {
     try { await api.put(`/mitgliedschaften/${m.mitgliedschaft_id}/fortsetzen`, {}); load() } catch (err) { alert(err.message) }
   }
 
+  async function handleKuendigen(m) {
+    if (!confirm(`Mitgliedschaft von "${m.name}" kündigen?`)) return
+    try {
+      const result = await api.put(`/mitgliedschaften/${m.mitgliedschaft_id}/kuendigen`, {})
+      alert(`Gekündigt zum ${result.end_datum} (4 Wochen zum Monatsende). Bis dahin bleibt der Zugang aktiv.`)
+      load()
+    } catch (err) { alert(err.message) }
+  }
+
   const s = styles
   return (
     <div style={s.page}>
@@ -118,6 +127,7 @@ function MitgliederTab() {
               <td style={s.td}>
                 <StatusBadge status={m.ms_status} />
                 {m.ms_status === 'pausiert' && <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: 2 }}>bis {m.pause_bis}</div>}
+                {m.ms_status === 'gekündigt' && <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: 2 }}>Zugang bis {m.ms_end_datum}</div>}
               </td>
               <td style={s.td}>{m.no_show_zaehler}</td>
               <td style={s.td}>{m.gesperrt_bis ?? '—'}</td>
@@ -126,6 +136,7 @@ function MitgliederTab() {
                 <button style={s.btnSmall} onClick={() => openEdit(m)}>Bearbeiten</button>{' '}
                 {m.ms_status === 'aktiv' && <button style={s.btnSmall} onClick={() => openPause(m)}>Pausieren</button>}
                 {m.ms_status === 'pausiert' && <button style={s.btnSmall} onClick={() => handleFortsetzen(m)}>Fortsetzen</button>}
+                {m.ms_status === 'aktiv' && <>{' '}<button style={{ ...s.btnSmall, ...s.btnWarning }} onClick={() => handleKuendigen(m)}>Kündigen</button></>}
                 {' '}<button style={{ ...s.btnSmall, ...s.btnDanger }} onClick={() => handleDelete(m.id, m.name)}>Löschen</button>
               </td>
             </tr>

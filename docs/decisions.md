@@ -364,6 +364,39 @@ Nein. `pause_tage_jahr` wird beim Anlegen der Pause in voller geplanter Länge g
 
 ---
 
+## 2026-07-10 — Zugangssperre bei Kündigung: end_datum-gated statt sofort bei Status-Wechsel (FZ-013)
+
+**Kontext:** `POST /buchungen` blockierte bisher (seit FZ-003-Scaffolding) jede Buchung sofort, sobald `mitgliedschaft.status === 'gekündigt'` war — unabhängig vom Datum. SPEC Regel 25 sagt aber explizit: "Bestehende Buchungen bleiben gültig bis Ablauf der Kündigungsfrist, danach automatisch keine Buchungen mehr möglich." Und `#SPEC.md` Widerspruch W3 stellt klar: "App deaktiviert Zugang automatisch **zum Enddatum**" — nicht sofort bei Kündigungs-Erklärung. Ein Mitglied, das kündigt, bleibt bis zum Ende der 4-Wochen-Frist normales zahlendes Mitglied.
+
+### Entscheidung
+Der Block in `POST /buchungen` prüft jetzt `heute > mitgliedschaft.end_datum` statt nur den Status. Zusätzlich wird während der laufenden Frist verhindert, dass ein Kurstermin *nach* `end_datum` gebucht wird (sonst könnte man sich für einen Termin anmelden, den man wegen der eigenen Kündigung gar nicht mehr wahrnehmen dürfte). `mitgliedschaft.status` bleibt dauerhaft `'gekündigt'` — keine weitere Statustransition nach Fristende, da laut vorheriger Entscheidung (FZ-001, Hard-Delete-Eintrag) "Historie bleibt erhalten" sich genau auf diesen gesetzten Status bezieht.
+
+### Alternativen verworfen
+- Bestehenden Sofort-Block beibehalten: widerspricht Regel 25 und W3 direkt — hätte gekündigten Mitgliedern während der bezahlten Kündigungsfrist den Zugang zu Unrecht sofort entzogen
+- Neuer Zwischenstatus (z.B. `'gekündigt_aktiv'` / `'gekündigt_inaktiv'`): mehr Zustände als nötig — ein reiner Datumsvergleich zur Anfragezeit reicht aus
+
+### Konsequenzen
+- Positiv: Verhalten entspricht jetzt der SPEC; kein periodischer Check nötig (anders als FZ-005/008/012) — die Prüfung passiert live bei jeder Buchungsanfrage, es gibt keinen gespeicherten Zustand, der "kippen" müsste
+- Risiko: bereits *vor* der Kündigung gebuchte Kurse mit Termin nach `end_datum` werden nicht automatisch storniert (siehe nächster Eintrag)
+
+---
+
+## 2026-07-10 — Keine automatische Stornierung bestehender Buchungen nach Kündigungsfrist (FZ-013)
+
+**Kontext:** Ein Mitglied könnte vor der Kündigung bereits einen Kurs gebucht haben, dessen Termin nach dem (zum Kündigungszeitpunkt noch unbekannten) `end_datum` liegt. SPEC Regel 25 äußert sich nur zum *Anlegen neuer* Buchungen ("keine Buchungen mehr möglich"), nicht zum Schicksal solcher bereits bestehender Buchungen.
+
+### Entscheidung
+Keine Aktion — bestehende Buchungen, die zufällig nach `end_datum` liegen, bleiben unverändert in der Datenbank stehen. Kein automatisches Storno, keine SPEC-Regel verlangt es explizit.
+
+### Alternativen verworfen
+- Beim Kündigen automatisch alle Buchungen mit `datum_zeit > end_datum` stornieren (inkl. Warteliste-Nachrücken für den freiwerdenden Platz): zusätzliche Komplexität für einen Rand-Fall, den SPEC nicht fordert
+
+### Konsequenzen
+- Positiv: einfache, vorhersagbare Implementierung
+- Risiko: in der Praxis sehr seltener Fall (Kündigung kurz nach einer weit vorausgebuchten Reservierung); für v1 akzeptiert, Admin kann so eine Buchung manuell im TeilnehmerModal stornieren
+
+---
+
 ## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
 
 **Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.
