@@ -87,9 +87,9 @@ function MitgliederTab() {
         <button style={s.btnPrimary} onClick={openCreate}>+ Neues Mitglied</button>
       </div>
       <table style={s.table}>
-        <thead><tr>{['Name', 'E-Mail', 'Tarif', 'Status', 'No-Shows', 'Gesperrt bis', ''].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+        <thead><tr>{['Name', 'E-Mail', 'Tarif', 'Status', 'No-Shows', 'Gesperrt bis', 'Offene Stornogebühr', ''].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
         <tbody>
-          {mitglieder.length === 0 && <tr><td colSpan={7} style={s.empty}>Noch keine Mitglieder</td></tr>}
+          {mitglieder.length === 0 && <tr><td colSpan={8} style={s.empty}>Noch keine Mitglieder</td></tr>}
           {mitglieder.map(m => (
             <tr key={m.id} style={s.tr}>
               <td style={s.td}><strong>{m.name}</strong></td>
@@ -98,6 +98,7 @@ function MitgliederTab() {
               <td style={s.td}><StatusBadge status={m.ms_status} /></td>
               <td style={s.td}>{m.no_show_zaehler}</td>
               <td style={s.td}>{m.gesperrt_bis ?? '—'}</td>
+              <td style={s.td}>{m.offene_stornogebuehr > 0 ? `${m.offene_stornogebuehr.toFixed(2)}€` : '—'}</td>
               <td style={s.td}>
                 <button style={s.btnSmall} onClick={() => openEdit(m)}>Bearbeiten</button>{' '}
                 <button style={{ ...s.btnSmall, ...s.btnDanger }} onClick={() => handleDelete(m.id, m.name)}>Löschen</button>
@@ -304,7 +305,11 @@ function TeilnehmerModal({ kurstermin, onClose }) {
 
   async function handleStorno(id) {
     if (!confirm('Buchung stornieren?')) return
-    try { await api.put(`/buchungen/${id}/stornieren`, {}); load() } catch (err) { alert(err.message) }
+    try {
+      const result = await api.put(`/buchungen/${id}/stornieren`, {})
+      if (result.stornogebuehr > 0) alert(`Stornierung <2h vor Kursbeginn: 50% Stornogebühr von ${result.stornogebuehr.toFixed(2)}€ wird beim nächsten SEPA-Einzug eingezogen.`)
+      load()
+    } catch (err) { alert(err.message) }
   }
 
   async function handleCheckin(id) {

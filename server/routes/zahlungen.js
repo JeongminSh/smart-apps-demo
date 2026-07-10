@@ -1,5 +1,6 @@
 const express = require('express')
 const db = require('../db/client')
+const { einziehenMonatsbeitrag } = require('../services/sepa')
 const router = express.Router()
 
 // GET /api/v1/zahlungen?mitglied_id=X
@@ -13,9 +14,8 @@ router.get('/', (req, res) => {
 
 // POST /api/v1/zahlungen/einzug  — SEPA-Simulation
 router.post('/einzug', (req, res) => {
-  const { mitglied_id, betrag, stornogebuehr } = req.body
-  const { einziehenMonatsbeitrag } = require('../services/sepa')
-  const zahlung = einziehenMonatsbeitrag(mitglied_id, betrag, stornogebuehr)
+  const { mitglied_id, betrag } = req.body
+  const zahlung = einziehenMonatsbeitrag(mitglied_id, betrag)
   res.status(201).json(zahlung)
 })
 

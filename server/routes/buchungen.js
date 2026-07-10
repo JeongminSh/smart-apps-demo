@@ -2,6 +2,7 @@ const express = require('express')
 const db = require('../db/client')
 const { advanceWaitlist } = require('../services/advance')
 const { recordCheckin, recordNoShow } = require('../services/noshow')
+const { berechneUndBucheGebuehr } = require('../services/storno')
 const router = express.Router()
 
 const WITH_MEMBER = `
@@ -92,13 +93,16 @@ router.post('/', (req, res) => {
 })
 
 router.put('/:id/stornieren', (req, res) => {
-  const b = db.prepare('SELECT id, storniert_am, kurstermin_id FROM buchung WHERE id = ?').get(req.params.id)
+  const b = db.prepare('SELECT * FROM buchung WHERE id = ?').get(req.params.id)
   if (!b) return res.status(404).json({ error: 'Buchung nicht gefunden' })
   if (b.storniert_am) return res.status(409).json({ error: 'Buchung wurde bereits storniert' })
-  // 2h-Frist und Stornogebühr: FZ-007
+
+  const session = db.prepare('SELECT * FROM kurstermin WHERE id = ?').get(b.kurstermin_id)
+  const stornogebuehr = berechneUndBucheGebuehr(b.mitglied_id, session)
+
   db.prepare('UPDATE buchung SET storniert_am=? WHERE id=?').run(new Date().toISOString(), req.params.id)
   advanceWaitlist(b.kurstermin_id)
-  res.json({ ok: true })
+  res.json({ ok: true, stornogebuehr })
 })
 
 router.put('/:id/checkin', (req, res) => {

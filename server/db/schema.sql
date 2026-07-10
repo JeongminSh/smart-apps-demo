@@ -10,13 +10,14 @@ CREATE TABLE IF NOT EXISTS tarif (
 );
 
 CREATE TABLE IF NOT EXISTS mitglied (
-  id              INTEGER PRIMARY KEY,
-  name            TEXT NOT NULL,
-  email           TEXT NOT NULL UNIQUE,
-  telefon         TEXT,
-  geburtstag      TEXT,
-  no_show_zaehler INTEGER NOT NULL DEFAULT 0,
-  gesperrt_bis    TEXT
+  id                    INTEGER PRIMARY KEY,
+  name                  TEXT NOT NULL,
+  email                 TEXT NOT NULL UNIQUE,
+  telefon               TEXT,
+  geburtstag            TEXT,
+  no_show_zaehler       INTEGER NOT NULL DEFAULT 0,
+  gesperrt_bis          TEXT,
+  offene_stornogebuehr  REAL NOT NULL DEFAULT 0   -- aufgelaufen, wird beim nächsten SEPA-Einzug addiert (FZ-007)
 );
 
 CREATE TABLE IF NOT EXISTS mitgliedschaft (

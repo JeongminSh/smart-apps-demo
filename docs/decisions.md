@@ -231,6 +231,39 @@ Neue Route `POST /api/v1/onboarding` (`server/routes/onboarding.js`): legt `mitg
 
 ---
 
+## 2026-07-10 — offene_stornogebuehr auf mitglied + guarded ALTER TABLE in init.js (FZ-007)
+
+**Kontext:** SPEC §3 Regel 8-10 verlangt, dass eine Stornogebühr (<2h vor Kursbeginn, 50%, Premium ausgenommen) bis zum nächsten SEPA-Einzug "aufläuft", statt sofort verbucht zu werden. Weder `mitglied` noch `mitgliedschaft` hatten dafür ein Feld — `schema.sql` nutzt überall `CREATE TABLE IF NOT EXISTS`, das bei bereits existierenden Tabellen keine Spalte nachträgt. Die lokale `fitzone.db` hat aber schon Testdaten, ein Neuanlegen der DB würde die verwerfen.
+
+### Entscheidung
+Neue Spalte `mitglied.offene_stornogebuehr REAL NOT NULL DEFAULT 0` in `schema.sql` (für Neuinstallationen) zusätzlich zu einer guarded `ALTER TABLE ... ADD COLUMN` in `server/db/init.js` (try/catch auf "duplicate column name"), damit `node server/db/init.js` sowohl auf einer frischen als auch auf einer bestehenden DB idempotent funktioniert, ohne Daten zu verlieren.
+
+### Alternativen verworfen
+- DB-Datei löschen und neu anlegen: hätte alle bisherigen Testdaten (Mitglieder, Buchungen, Kurstermine) vernichtet
+- Eigenes Migrationsframework: massiv überdimensioniert für ein Projekt mit einer einzigen SQLite-Datei und keinem Deployment
+
+### Konsequenzen
+- Positiv: bestehende Dev-DB bleibt erhalten; `node server/db/init.js` bleibt der einzige Setup-Befehl (kein neuer Schritt in der Doku nötig)
+- Risiko: wächst die Zahl solcher nachträglichen Spalten, wird `init.js` unübersichtlich — falls das passiert, richtiges Migrationstool (z.B. eine `migrations/`-Ordnerkonvention) einführen
+
+---
+
+## 2026-07-10 — sepa.js zieht offene_stornogebuehr selbst statt sie als Parameter zu erhalten (FZ-007)
+
+**Kontext:** `services/sepa.js#einziehenMonatsbeitrag` und `POST /zahlungen/einzug` existierten bereits als Scaffolding mit einem `stornogebuehr`-Parameter, den der Aufrufer manuell mitgeben musste. SPEC Regel 9 sagt aber explizit "automatisch ... kein manueller Schritt mehr".
+
+### Entscheidung
+`einziehenMonatsbeitrag(mitgliedId, betrag)` liest `mitglied.offene_stornogebuehr` selbst aus der DB, addiert sie zum Beitrag, und setzt sie nach dem Einzug auf 0 zurück. Der `stornogebuehr`-Parameter entfällt komplett aus Funktion und Route.
+
+### Alternativen verworfen
+- Parameter beibehalten, Frontend/Aufrufer muss den Wert vorher per GET abfragen und mitschicken: genau der manuelle Schritt, den die SPEC ausschließt
+
+### Konsequenzen
+- Positiv: `POST /zahlungen/einzug` ist jetzt tatsächlich "kein manueller Schritt" für die Gebühr; FZ-008 (SEPA-Monatseinzug) muss beim Aufruf nur noch `mitglied_id` und `betrag` kennen
+- Neutral: Route und Service sind an dieser Stelle enger gekoppelt an die `mitglied`-Tabelle — akzeptiert, da beide ohnehin im selben Bounded Context liegen
+
+---
+
 ## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
 
 **Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.
