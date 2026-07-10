@@ -8,6 +8,7 @@ const TODAY = new Date().toISOString().slice(0, 10)
 const TABS = [
   { key: 'mitglieder', label: 'Mitglieder' },
   { key: 'kursplanung', label: 'Kursplanung' },
+  { key: 'zahlungen', label: 'Zahlungen' },
   { key: 'stammdaten', label: 'Stammdaten' },
 ]
 
@@ -27,6 +28,7 @@ export default function AdminPage() {
       <main>
         {tab === 'mitglieder' && <MitgliederTab />}
         {tab === 'kursplanung' && <KursplanungTab />}
+        {tab === 'zahlungen' && <ZahlungenTab />}
         {tab === 'stammdaten' && <StammdatenTab />}
       </main>
     </div>
@@ -415,6 +417,41 @@ function TeilnehmerModal({ kurstermin, onClose }) {
   )
 }
 
+// ── Zahlungen ─────────────────────────────────────────────────────────────────
+
+function ZahlungenTab() {
+  const [zahlungen, setZahlungen] = useState([])
+
+  useEffect(() => { api.get('/zahlungen').then(setZahlungen) }, [])
+
+  const s = styles
+  return (
+    <div style={s.page}>
+      <div style={s.header}>
+        <h1 style={s.title}>Zahlungen</h1>
+      </div>
+      <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '-1rem 0 1.25rem' }}>
+        Monatsbeitrag wird automatisch per SEPA eingezogen (simuliert). Stornogebühren sind bereits im Betrag enthalten.
+      </p>
+      <table style={s.table}>
+        <thead><tr>{['Mitglied', 'Betrag', 'Typ', 'Datum', 'Status'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+        <tbody>
+          {zahlungen.length === 0 && <tr><td colSpan={5} style={s.empty}>Noch keine Zahlungen</td></tr>}
+          {zahlungen.map(z => (
+            <tr key={z.id} style={s.tr}>
+              <td style={s.td}><strong>{z.mitglied_name}</strong></td>
+              <td style={s.td}>{z.betrag.toFixed(2)}€</td>
+              <td style={s.td}>{z.typ}</td>
+              <td style={s.td}>{z.datum}</td>
+              <td style={s.td}><StatusBadge status={z.status} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ── Stammdaten ────────────────────────────────────────────────────────────────
 
 function StammdatenTab() {
@@ -614,7 +651,7 @@ function Field({ label, type = 'text', value, onChange, required }) {
 }
 
 function StatusBadge({ status }) {
-  const map = { aktiv: ['#15803d', '#dcfce7'], pausiert: ['#b45309', '#fef3c7'], 'gekündigt': ['#b91c1c', '#fee2e2'], geplant: ['#1d4ed8', '#eff6ff'], abgesagt: ['#b91c1c', '#fee2e2'] }
+  const map = { aktiv: ['#15803d', '#dcfce7'], pausiert: ['#b45309', '#fef3c7'], 'gekündigt': ['#b91c1c', '#fee2e2'], geplant: ['#1d4ed8', '#eff6ff'], abgesagt: ['#b91c1c', '#fee2e2'], bezahlt: ['#15803d', '#dcfce7'], offen: ['#b45309', '#fef3c7'] }
   const [color, background] = map[status] ?? ['#6b7280', '#f3f4f6']
   return <span style={{ color, background, padding: '2px 8px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600 }}>{status ?? '—'}</span>
 }

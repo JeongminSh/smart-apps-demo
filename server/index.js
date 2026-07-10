@@ -13,6 +13,7 @@ const trainerRouter = require('./routes/trainer')
 const zahlungenRouter = require('./routes/zahlungen')
 const onboardingRouter = require('./routes/onboarding')
 const { checkAbgelaufeneSperren } = require('./services/sperre')
+const { pruefeMonatseinzug } = require('./services/monatseinzug')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -38,3 +39,7 @@ app.listen(PORT, () => {
 // FZ-005: Buchungssperre läuft automatisch ab, Mitglied wird benachrichtigt
 checkAbgelaufeneSperren()
 setInterval(checkAbgelaufeneSperren, 60 * 60 * 1000)
+
+// FZ-008: Monatsbeitrag läuft automatisch per SEPA (idempotent, siehe monatseinzug.js)
+pruefeMonatseinzug()
+setInterval(pruefeMonatseinzug, 60 * 60 * 1000)

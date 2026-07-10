@@ -264,6 +264,23 @@ Neue Spalte `mitglied.offene_stornogebuehr REAL NOT NULL DEFAULT 0` in `schema.s
 
 ---
 
+## 2026-07-10 — SEPA-Monatseinzug: idempotenter Interval-Check statt Datum-basiertem Scheduler (FZ-008)
+
+**Kontext:** SPEC §3 Regel 20 verlangt automatischen monatlichen Beitragseinzug, ohne dass Lisa manuell etwas anstoßen muss. Es gibt keinen festen "Abrechnungstag" pro Mitglied (SPEC nennt keinen), und wie bei FZ-005 (`sperre.js`) gibt es keinen natürlichen Request-Trigger — niemand tut etwas, wenn ein neuer Monat beginnt.
+
+### Entscheidung
+`server/services/monatseinzug.js#pruefeMonatseinzug` läuft beim Serverstart und danach stündlich per `setInterval` (gleiches Muster wie `checkAbgelaufeneSperren`, FZ-005). Sie holt alle Mitgliedschaften mit `status='aktiv'` und `sepa_mandat=1`, die im laufenden Kalendermonat (`substr(datum,1,7)`) noch keine `zahlung` haben, und ruft für jede `einziehenMonatsbeitrag` auf. Die `NOT EXISTS`-Bedingung macht den Lauf idempotent: mehrfaches Prüfen im selben Monat (Serverneustart, mehrere Interval-Ticks) bucht nicht doppelt. Kein fester Abrechnungstag — wer im Monat noch nicht bezahlt hat, wird beim nächsten Check fällig, unabhängig vom Eintrittsdatum.
+
+### Alternativen verworfen
+- Abrechnung am Tag des `start_datum` (Jahrestag-Logik pro Mitglied): mehr Komplexität, SPEC verlangt keinen festen Stichtag
+- Externer Cron-Job (System-Crontab, node-cron): unnötige Abhängigkeit für ein einzelnes Intervall in einem Dev-Server ohne Deployment
+
+### Konsequenzen
+- Positiv: kein manueller Trigger nötig; robust gegen Serverneustarts (Idempotenz durch `NOT EXISTS`); gleiche, bereits etablierte Mechanik wie FZ-005
+- Risiko: läuft der Server einen ganzen Monat nicht, wird der übersprungene Monat nicht nachträglich abgerechnet (kein Backbilling) — in v1 akzeptiert, da Lisas Studio-Rechner durchgehend läuft
+
+---
+
 ## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
 
 **Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.
