@@ -1,5 +1,6 @@
 const db = require('../db/client')
 const { sendNachruecken } = require('./mail')
+const { verteileZoomLink } = require('./zoomlink')
 
 function advanceWaitlist(kurstermin_id) {
   const session = db.prepare(`
@@ -30,6 +31,7 @@ function advanceWaitlist(kurstermin_id) {
 
   const datum = session.datum_zeit.slice(0, 16).replace('T', ' ')
   sendNachruecken(next.mitglied_email, next.mitglied_name, session.kurstyp_name, datum).catch(() => {})
+  verteileZoomLink(kurstermin_id, next.mitglied_id)
 }
 
 module.exports = { advanceWaitlist }

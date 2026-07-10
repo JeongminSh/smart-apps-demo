@@ -3,6 +3,7 @@ const db = require('../db/client')
 const { advanceWaitlist } = require('../services/advance')
 const { recordCheckin, recordNoShow } = require('../services/noshow')
 const { berechneUndBucheGebuehr } = require('../services/storno')
+const { verteileZoomLink } = require('../services/zoomlink')
 const router = express.Router()
 
 const WITH_MEMBER = `
@@ -85,10 +86,12 @@ router.post('/', (req, res) => {
 
   if (cancelled) {
     db.prepare('UPDATE buchung SET storniert_am=NULL, gebucht_am=? WHERE id=?').run(new Date().toISOString(), cancelled.id)
+    verteileZoomLink(kurstermin_id, mitglied_id)
     return res.status(201).json({ id: cancelled.id })
   }
 
   const result = db.prepare('INSERT INTO buchung (mitglied_id, kurstermin_id, gebucht_am) VALUES (?, ?, ?)').run(mitglied_id, kurstermin_id, new Date().toISOString())
+  verteileZoomLink(kurstermin_id, mitglied_id)
   res.status(201).json({ id: Number(result.lastInsertRowid) })
 })
 

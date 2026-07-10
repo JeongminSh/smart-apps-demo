@@ -39,7 +39,7 @@ _Stabile Feature-IDs. Nicht umnummerieren. Killed-IDs bleiben killed._
 | FZ-008 | SEPA-Monatseinzug | 1 | done | SPEC.md §3 Regel 20 | monatseinzug.js prüft stündlich (idempotent) aktive+SEPA-Mitgliedschaften ohne Zahlung im laufenden Monat, zieht via sepa.js ein; neuer Zahlungen-Tab in AdminPage; commit: 5087b1a |
 | FZ-009 | Trainer-Zugang (Termine + Teilnehmerliste + Check-in) | 1 | done | SPEC.md §1 Trainer | TrainerPage.jsx: Namensauswahl statt Login, eigene Termine, Teilnehmerliste + Check-in/No-Show; neue Route GET /trainer/:id/kurstermine/:kursterminId/teilnehmer liefert nur Name+Status (kein Zugriff auf Zahlungen/Kontaktdaten), 403 bei fremdem Termin; commit: f79891d |
 | FZ-010 | Kursabsage mit automatischer Benachrichtigung | 1 | done | SPEC.md §3 Regel 17 | absage.js benachrichtigt bei PUT /kurstermine/:id/absagen alle aktiven (nicht stornierten) Buchungen per sendKursabsage; UI-Button existierte bereits, nur Notification-TODO nachgetragen; commit: 0283dfe |
-| FZ-011 | Online-Kurs Zoom-Link-Verteilung | 1 | validated | SPEC.md §3 Regel 27 | Nur an gebuchte Mitglieder, automatisch |
+| FZ-011 | Online-Kurs Zoom-Link-Verteilung | 1 | done | SPEC.md §3 Regel 27 | zoomlink.js sendet bei Online-Kursterminen mit zoom_link automatisch an POST /buchungen (direkt + reaktiviert) und advanceWaitlist (Nachrücker); Studio-Kurse unberührt |
 | FZ-012 | Mitgliedschaft pausieren | 1 | validated | SPEC.md §3 Regel 22–23 | Nur Admin; max. 3 Monate/Kalenderjahr |
 | FZ-013 | Mitgliedschaft kündigen + Zugang-Deaktivierung | 1 | validated | SPEC.md §3 Regel 24–26 | 4 Wochen zum Monatsende; auto Deaktivierung |
 | FZ-014 | QR-Code Check-in | 2 | hypo | SPEC.md §5 Nice-to-have | v2+, nach stabilem Betrieb |
