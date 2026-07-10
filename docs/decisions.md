@@ -197,6 +197,23 @@ Validierungsreihenfolge: Termin→Mitglied→Sperre→pausiert/gekündigt→Dupl
 
 ---
 
+## 2026-07-10 — No-Show-Sperre: stündlicher Interval-Check statt Request-Trigger (FZ-005)
+
+**Kontext:** SPEC §3 Regel 19 verlangt, dass die Buchungssperre nach 2 Wochen automatisch aufgehoben wird und das Mitglied benachrichtigt wird. Das Aufheben selbst passiert implizit (die Sperre-Prüfung in `POST /buchungen` vergleicht `gesperrt_bis >= heute`, ein abgelaufenes Datum blockiert also ohnehin nicht mehr). Die Benachrichtigung braucht aber einen aktiven Trigger — anders als bei `advanceWaitlist` (FZ-004) gibt es hier keinen natürlichen Request-Moment, an dem irgendjemand etwas tut, wenn eine Sperre abläuft.
+
+### Entscheidung
+`server/services/sperre.js#checkAbgelaufeneSperren` läuft einmal beim Serverstart und danach per `setInterval` stündlich (`server/index.js`). Sie sucht Mitglieder mit `gesperrt_bis < heute`, setzt `gesperrt_bis = NULL` und verschickt `sendSperreFrei`.
+
+### Alternativen verworfen
+- Eigener Scheduler/Cron-Package (z.B. node-cron): unnötige Dependency für einen einzigen stündlichen Check
+- Lazy-Check beim nächsten `GET /mitglieder`: Benachrichtigung würde nur verschickt, wenn zufällig jemand die Admin-Seite lädt — nicht zuverlässig genug für "automatisch"
+
+### Konsequenzen
+- Positiv: Sperre wird zuverlässig aufgehoben und gemeldet, unabhängig davon ob ein Request reinkommt
+- Risiko: Server muss durchlaufen (kein Problem in v1, da `localhost`-Dev-Betrieb ohnehin dauerhaft läuft); bei einem Neustart kurz vor Ablauf verzögert sich die Benachrichtigung höchstens um die Downtime — in v1 akzeptiert
+
+---
+
 ## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
 
 **Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.

@@ -1,6 +1,7 @@
 const express = require('express')
 const db = require('../db/client')
 const { advanceWaitlist } = require('../services/advance')
+const { recordCheckin, recordNoShow } = require('../services/noshow')
 const router = express.Router()
 
 const WITH_MEMBER = `
@@ -101,8 +102,16 @@ router.put('/:id/stornieren', (req, res) => {
 })
 
 router.put('/:id/checkin', (req, res) => {
-  db.prepare('UPDATE buchung SET erschienen=1, checkin_zeit=? WHERE id=?').run(new Date().toISOString(), req.params.id)
-  res.json({ ok: true })
+  const result = recordCheckin(req.params.id)
+  if (result.error === 'not_found') return res.status(404).json({ error: 'Buchung nicht gefunden' })
+  res.json(result)
+})
+
+router.put('/:id/no-show', (req, res) => {
+  const result = recordNoShow(req.params.id)
+  if (result.error === 'not_found') return res.status(404).json({ error: 'Buchung nicht gefunden' })
+  if (result.error === 'storniert') return res.status(409).json({ error: 'Buchung wurde storniert' })
+  res.json(result)
 })
 
 module.exports = router

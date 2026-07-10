@@ -307,6 +307,15 @@ function TeilnehmerModal({ kurstermin, onClose }) {
     try { await api.put(`/buchungen/${id}/stornieren`, {}); load() } catch (err) { alert(err.message) }
   }
 
+  async function handleCheckin(id) {
+    try { await api.put(`/buchungen/${id}/checkin`, {}); load() } catch (err) { alert(err.message) }
+  }
+
+  async function handleNoShow(id) {
+    if (!confirm('Als No-Show markieren? Bei 3 in Folge greift automatisch die Buchungssperre.')) return
+    try { await api.put(`/buchungen/${id}/no-show`, {}); load() } catch (err) { alert(err.message) }
+  }
+
   async function handleWlEntfernen(id) {
     if (!confirm('Von Warteliste entfernen?')) return
     try { await api.delete(`/warteliste/${id}`); load() } catch (err) { alert(err.message) }
@@ -344,6 +353,10 @@ function TeilnehmerModal({ kurstermin, onClose }) {
                   {b.erschienen === 1 ? '✓ erschienen' : b.erschienen === 0 ? '✗ No-Show' : '—'}
                 </td>
                 <td style={s.td}>
+                  {!b.storniert_am && b.erschienen === null && <>
+                    <button style={s.btnSmall} onClick={() => handleCheckin(b.id)}>Check-in</button>{' '}
+                    <button style={{ ...s.btnSmall, ...s.btnDanger }} onClick={() => handleNoShow(b.id)}>No-Show</button>{' '}
+                  </>}
                   {!b.storniert_am && <button style={{ ...s.btnSmall, ...s.btnDanger }} onClick={() => handleStorno(b.id)}>Storno</button>}
                 </td>
               </tr>

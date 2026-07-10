@@ -11,6 +11,7 @@ const buchungenRouter = require('./routes/buchungen')
 const wartelisteRouter = require('./routes/warteliste')
 const trainerRouter = require('./routes/trainer')
 const zahlungenRouter = require('./routes/zahlungen')
+const { checkAbgelaufeneSperren } = require('./services/sperre')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -31,3 +32,7 @@ app.use('/api/v1/zahlungen', zahlungenRouter)
 app.listen(PORT, () => {
   console.log(`FitZone Server läuft auf http://localhost:${PORT}`)
 })
+
+// FZ-005: Buchungssperre läuft automatisch ab, Mitglied wird benachrichtigt
+checkAbgelaufeneSperren()
+setInterval(checkAbgelaufeneSperren, 60 * 60 * 1000)
