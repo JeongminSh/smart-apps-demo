@@ -36,7 +36,7 @@ _Stabile Feature-IDs. Nicht umnummerieren. Killed-IDs bleiben killed._
 | FZ-005 | No-Show-Tracking + Buchungssperre | 1 | done | SPEC.md §5 Prio 3 | Check-in/No-Show-Buttons in TeilnehmerModal; noshow.js sperrt bei 3x in Folge; sperre.js hebt Sperre stündlich automatisch auf + Email; commit: 5c02f0e |
 | FZ-006 | Studio-Onboarding (Tablet + SEPA + Welcome-Email) | 1 | done | SPEC.md §5 Prio 4 | Neue Route POST /api/v1/onboarding (Mitglied+Mitgliedschaft+SEPA-Mandat atomar); MitgliedPage.jsx als Tablet-Kiosk-Formular; sendWillkommen; commit: 4abbd67 |
 | FZ-007 | Automatische Stornogebühr beim SEPA-Einzug | 1 | done | SPEC.md §5 Prio 5 | storno.js berechnet 50%-Gebühr bei <2h/Premium-Ausnahme, sammelt in mitglied.offene_stornogebuehr; sepa.js zieht sie automatisch beim nächsten Einzug ab und setzt zurück; commit: 8a717b7 |
-| FZ-008 | SEPA-Monatseinzug | 1 | done | SPEC.md §3 Regel 20 | monatseinzug.js prüft stündlich (idempotent) aktive+SEPA-Mitgliedschaften ohne Zahlung im laufenden Monat, zieht via sepa.js ein; neuer Zahlungen-Tab in AdminPage |
+| FZ-008 | SEPA-Monatseinzug | 1 | done | SPEC.md §3 Regel 20 | monatseinzug.js prüft stündlich (idempotent) aktive+SEPA-Mitgliedschaften ohne Zahlung im laufenden Monat, zieht via sepa.js ein; neuer Zahlungen-Tab in AdminPage; commit: 5087b1a |
 | FZ-009 | Trainer-Zugang (Termine + Teilnehmerliste + Check-in) | 1 | validated | SPEC.md §1 Trainer | Kein Zugriff auf Zahlungen/Gehälter/volle Kontaktdaten |
 | FZ-010 | Kursabsage mit automatischer Benachrichtigung | 1 | validated | SPEC.md §3 Regel 17 | Alle gebuchten Mitglieder automatisch informiert |
 | FZ-011 | Online-Kurs Zoom-Link-Verteilung | 1 | validated | SPEC.md §3 Regel 27 | Nur an gebuchte Mitglieder, automatisch |
