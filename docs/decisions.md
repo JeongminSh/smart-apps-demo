@@ -214,6 +214,23 @@ Validierungsreihenfolge: Termin→Mitglied→Sperre→pausiert/gekündigt→Dupl
 
 ---
 
+## 2026-07-10 — Eigener Onboarding-Endpunkt statt Wiederverwendung von mitglieder/mitgliedschaften (FZ-006)
+
+**Kontext:** SPEC §3 Regel 21 verlangt einen einzigen Tablet-Schritt: Registrierung, SEPA-Mandat und sofortiger Zugang inklusive automatischer Willkommens-Email. `POST /mitglieder` + `POST /mitgliedschaften` existieren bereits (genutzt vom Admin-CRUD in `AdminPage.jsx`), decken aber nicht "automatisch" ab — und `POST /mitgliedschaften` wird auch beim nachträglichen Zuweisen eines Tarifs zu einem bestehenden Mitglied (Admin-Edit) aufgerufen, wo eine Willkommens-Email fachlich falsch wäre.
+
+### Entscheidung
+Neue Route `POST /api/v1/onboarding` (`server/routes/onboarding.js`): legt `mitglied` + `mitgliedschaft` (Status `aktiv`, Startdatum heute, `sepa_mandat=1`) in einer Transaktion an und verschickt danach `sendWillkommen`. Nur für den Tablet-Flow gedacht — Admin-CRUD bleibt bei den bestehenden getrennten Endpunkten. `sepa_mandat` ist Pflichtfeld (400 wenn fehlt), da die Studio-Regel SEPA-Mandat und sofortigen Zugang bündelt. `MitgliedPage.jsx` (bisher ungenutzter Platzhalter-Catch-all) wird zum Tablet-Kiosk-Registrierungsformular.
+
+### Alternativen verworfen
+- Willkommens-Email in `POST /mitgliedschaften` einbauen: hätte auch bei Admin-Tarifzuweisungen an Bestandsmitglieder gefeuert — falsches Signal
+- Frontend orchestriert 2 Requests (mitglieder + mitgliedschaften) + separater Email-Trigger: Email-Versand gehört serverseitig, kein Anlass für einen dritten Request
+
+### Konsequenzen
+- Positiv: ein atomarer Request für den kompletten Kiosk-Flow; Admin-Flows bleiben unangetastet
+- Neutral: Duplizierte Insert-Logik zu `mitglieder.js`/`mitgliedschaften.js` (kein Wiederverwenden der Handler) — akzeptiert, da die Validierungsregeln (SEPA-Pflicht, sofort aktiv) bewusst unterschiedlich zum Admin-Pfad sind
+
+---
+
 ## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
 
 **Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.

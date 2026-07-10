@@ -11,6 +11,7 @@ const buchungenRouter = require('./routes/buchungen')
 const wartelisteRouter = require('./routes/warteliste')
 const trainerRouter = require('./routes/trainer')
 const zahlungenRouter = require('./routes/zahlungen')
+const onboardingRouter = require('./routes/onboarding')
 const { checkAbgelaufeneSperren } = require('./services/sperre')
 
 const app = express()
@@ -28,6 +29,7 @@ app.use('/api/v1/buchungen', buchungenRouter)
 app.use('/api/v1/warteliste', wartelisteRouter)
 app.use('/api/v1/trainer', trainerRouter)
 app.use('/api/v1/zahlungen', zahlungenRouter)
+app.use('/api/v1/onboarding', onboardingRouter)
 
 app.listen(PORT, () => {
   console.log(`FitZone Server läuft auf http://localhost:${PORT}`)
