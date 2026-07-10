@@ -281,6 +281,40 @@ Neue Spalte `mitglied.offene_stornogebuehr REAL NOT NULL DEFAULT 0` in `schema.s
 
 ---
 
+## 2026-07-10 — Trainer-Identität per Namensauswahl statt Login (FZ-009)
+
+**Kontext:** SPEC verlangt einen eigenen Trainer-Zugang mit eingeschränkter Sicht (eigene Termine, Teilnehmerlisten, Check-in), aber es existiert in v1 kein Auth-System (kein Login irgendwo in der App — `/admin` und `/trainer` sind beide offene Routen). Der Trainer muss der App trotzdem mitteilen, wer er ist, um "eigene Termine" zu filtern.
+
+### Entscheidung
+`TrainerPage.jsx` zeigt bei fehlender Auswahl einen einfachen Namens-Picker ("Wer bist du?", Liste aller Trainer zum Antippen) — dieselbe Idee wie die Tablet-Kiosk-Auswahl aus FZ-006, nur ohne Formular. Die Auswahl wird in `localStorage` gemerkt (Trainer nutzt üblicherweise sein eigenes Gerät), mit "Wechseln"-Button zum Zurücksetzen.
+
+### Alternativen verworfen
+- Echtes Login-System (Passwort/PIN) einführen: deutlich größerer Scope, in keiner SPEC-Regel gefordert, widerspricht "Simplicity First" für v1
+- Trainer-ID als URL-Parameter (`/trainer/2`): kein Unterschied in der Sicherheit, aber schlechtere UX (Trainer müsste sich eine URL merken statt zu tippen)
+
+### Konsequenzen
+- Positiv: kein Auth-Aufwand, konsistent mit dem Rest der App (auch Admin hat kein Login)
+- Risiko: keine echte Absicherung — jeder am Gerät kann sich als jeder Trainer ausgeben. Für v1 (kleines Studio, ein Standort, vertrauensbasiert) akzeptiert; bei echtem Deployment müsste hier ein Login nachgerüstet werden
+
+---
+
+## 2026-07-10 — Teilnehmerliste für Trainer: eigener serverseitig gefilterter Endpunkt (FZ-009)
+
+**Kontext:** SPEC §3 Regel 14 verlangt explizit, dass Trainer keinen Zugriff auf Zahlungen/volle Kontaktdaten der Kunden haben — anders als die generelle Auth-Losigkeit der App (siehe oben) ist das eine konkrete Datenminimierungs-Regel, kein reines Zugriffsproblem. Der bestehende `GET /buchungen?kurstermin_id=X` (von `TeilnehmerModal` im Admin genutzt) liefert `mitglied_email` und `tarif_name` mit — zu viel für die Trainer-Ansicht.
+
+### Entscheidung
+Neue Route `GET /trainer/:id/kurstermine/:kursterminId/teilnehmer`: prüft zuerst, dass der Kurstermin tatsächlich diesem Trainer gehört (403 sonst), und `SELECT`et dann nur `id, storniert_am, erschienen, checkin_zeit, mitglied_name` — kein Email-Feld, kein Tarif-JOIN. Die Datenminimierung passiert im SQL, nicht nur durchs Weglassen von Spalten im Frontend, damit die Netzwerk-Response selbst nichts Überflüssiges enthält.
+
+### Alternativen verworfen
+- Bestehenden `/buchungen`-Endpunkt mit einem `?ansicht=trainer`-Query-Flag wiederverwenden: hätte den Endpunkt mit Sonderfall-Logik für zwei Rollen vermischt, für einen einzigen zusätzlichen Read-Endpunkt nicht nötig
+- Nur im Frontend die Spalten ausblenden: Response enthielte trotzdem Email/Tarif — verfehlt den Zweck der Regel
+
+### Konsequenzen
+- Positiv: Regel 14 ist strukturell erzwungen, nicht nur eine UI-Konvention; Check-in/No-Show laufen weiterhin über die bestehenden `PUT /buchungen/:id/checkin` bzw. `/no-show` Routen (kein Trainer-Ownership-Check dort, da diese schon von Admin genutzt werden und es keine Sessions gibt, um "wer ruft auf" zu unterscheiden)
+- Neutral: minimale Duplikation zur `WITH_JOINS`-Query in `kurstermine.js` — akzeptiert, da die Feldmengen bewusst unterschiedlich sind
+
+---
+
 ## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
 
 **Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.
