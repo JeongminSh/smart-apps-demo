@@ -1,5 +1,6 @@
 const express = require('express')
 const db = require('../db/client')
+const { benachrichtigeAbsage } = require('../services/absage')
 const router = express.Router()
 
 const WITH_JOINS = `
@@ -38,7 +39,7 @@ router.put('/:id', (req, res) => {
 
 router.put('/:id/absagen', (req, res) => {
   db.prepare("UPDATE kurstermin SET status='abgesagt' WHERE id=?").run(req.params.id)
-  // TODO: Benachrichtigung aller gebuchten Mitglieder (FZ-010)
+  benachrichtigeAbsage(req.params.id)
   res.json({ ok: true })
 })
 
