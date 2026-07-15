@@ -41,6 +41,22 @@ Multi-Standort ist kein Feature in v1. FZ-017 = killed.
 
 ---
 
+## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record (FZ-007)
+
+**Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.
+
+### Entscheidung
+Stornogebühr wird nicht als eigene Zahlungstransaktion modelliert, sondern beim nächsten SEPA-Einzug zum Beitrag addiert. In der Zahlung-Tabelle: Typ "Beitrag+Stornogebühr" oder Betrag = Monatsbeitrag + aufgelaufene Gebühren.
+
+### Alternativen verworfen
+- Eigene Stornogebühr-Transaktion: nicht nötig, Lisa hat keinen Bedarf für separate Ausweisung im v1
+
+### Konsequenzen
+- Positiv: einfacheres Payment-Modell
+- Risiko: weniger granulare Buchführung — für v1 akzeptiert
+
+---
+
 ## 2026-07-03 — Kurstyp nach Anlage eines Kurstermins nicht mehr änderbar (FZ-002)
 
 **Kontext:** Im Bearbeiten-Modal für einen Kurstermin wäre ein Kurstyp-Wechsel technisch möglich, würde aber Inkonsistenz erzeugen: die gebuchten Mitglieder haben einen Yoga-Termin gebucht, nicht Spinning. Die Trainer-Qualifikationsfilterung würde ebenfalls nicht mehr passen.
@@ -315,6 +331,40 @@ Neue Route `GET /trainer/:id/kurstermine/:kursterminId/teilnehmer`: prüft zuers
 
 ---
 
+## 2026-07-10 — Kursabsage benachrichtigt nur aktive Buchungen, fire-and-forget bei Mail-Fehlern (FZ-010)
+
+**Kontext:** SPEC §3 Regel 17 verlangt, dass bei einer Kursabsage alle gebuchten Mitglieder automatisch benachrichtigt werden. Ein Kurstermin kann aber auch bereits stornierte Buchungen enthalten (Mitglied hatte selbst abgesagt) — diese sollen keine Absage-Email mehr erhalten, da für sie ohnehin nichts mehr abzusagen ist.
+
+### Entscheidung
+`server/services/absage.js#benachrichtigeAbsage` selektiert nur Buchungen mit `storniert_am IS NULL` und verschickt an diese `sendKursabsage`. Der Mail-Versand läuft fire-and-forget (`.catch(() => {})`) — ein einzelner fehlgeschlagener Versand blockiert weder die Absage selbst noch die Benachrichtigung der übrigen Mitglieder.
+
+### Alternativen verworfen
+- Alle jemals gebuchten Mitglieder benachrichtigen, unabhängig vom Storno-Status: verwirrende Emails an Mitglieder, die den Kurs bereits selbst storniert hatten
+- Mail-Fehler propagieren/Request fehlschlagen lassen: ein einzelner SMTP-Fehler dürfte nicht verhindern, dass der Kurstermin als abgesagt markiert bzw. die übrigen Mitglieder benachrichtigt werden
+
+### Konsequenzen
+- Positiv: nur tatsächlich betroffene Mitglieder werden benachrichtigt; die Absage selbst ist robust gegen einzelne Mail-Fehler
+- Risiko: ein fehlgeschlagener Versand wird nirgends protokolliert oder erneut versucht — in v1 akzeptiert (kein Monitoring/Retry-Bedarf im Ethereal-Testbetrieb)
+
+---
+
+## 2026-07-10 — Zoom-Link-Versand pro Buchung statt Batch pro Kurstermin (FZ-011)
+
+**Kontext:** SPEC §3 Regel 27 verlangt, dass bei Online-Kursen der Zoom-Link automatisch an gebuchte Mitglieder geht. Anders als bei der Kursabsage (FZ-010, ein einmaliger Batch-Versand an alle bestehenden Buchungen) entstehen Buchungen für einen Online-Kurstermin nach und nach — auch durch Nachrücken von der Warteliste (Regel 5: Nachrücker zählt wie normale Buchung).
+
+### Entscheidung
+`server/services/zoomlink.js#verteileZoomLink(kurstermin_id, mitglied_id)` wird pro einzelner Buchung aufgerufen — direkt in `POST /buchungen` (Neubuchung und Reaktivierung nach Storno) sowie in `advanceWaitlist` (`server/services/advance.js`) beim Nachrücken. Die Funktion prüft selbst, ob der Kurstyp `Online` ist und ein `zoom_link` gesetzt ist; bei Studio-Kursen oder fehlendem Link passiert nichts.
+
+### Alternativen verworfen
+- Ein Batch-Versand analog zu FZ-010 bei jeder Änderung: es gibt keinen einzelnen Auslösemoment wie bei einer Absage — Buchungen kommen über mehrere Endpunkte (Buchung, Reaktivierung, Nachrücken) laufend hinzu, ein zentraler Batch-Trigger würde diese Fälle nicht abdecken
+- Format-/Link-Prüfung im Aufrufer statt in `verteileZoomLink` selbst: hätte die Prüfung an mehreren Call-Sites (Buchung, Reaktivierung, Nachrücken) dupliziert
+
+### Konsequenzen
+- Positiv: neue Aufrufstellen müssten nur `verteileZoomLink` aufrufen, ohne die Online/Studio-Unterscheidung selbst zu kennen
+- Neutral: gleiche fire-and-forget-Fehlerbehandlung wie bei FZ-010 (`.catch(() => {})`) — konsistent, aber gleiches Risiko (kein Retry/Logging bei Mail-Fehlern)
+
+---
+
 ## 2026-07-10 — "3 Monate" Pause = 90 Tage (Annahme, nicht mit Lisa geklärt) (FZ-012)
 
 **Kontext:** SPEC Regel 22 sagt "max. 3 Monate pro Kalenderjahr (kumulativ)", aber das Schema (`mitgliedschaft.pause_tage_jahr`, schon vor dieser Session angelegt) zählt in Tagen, nicht in Monaten. Anders als beim Plus-Tarif-Limit ist diese Ambiguität nicht in `#SPEC.md §6` als offene Frage vermerkt — Lisa hält "3 Monate" offenbar für eindeutig genug, nur die exakte Tageszahl ist technische Übersetzungsarbeit.
@@ -394,21 +444,5 @@ Keine Aktion — bestehende Buchungen, die zufällig nach `end_datum` liegen, bl
 ### Konsequenzen
 - Positiv: einfache, vorhersagbare Implementierung
 - Risiko: in der Praxis sehr seltener Fall (Kündigung kurz nach einer weit vorausgebuchten Reservierung); für v1 akzeptiert, Admin kann so eine Buchung manuell im TeilnehmerModal stornieren
-
----
-
-## 2026-06-26 — Stornogebühr als addierter Betrag, kein eigener Payment-Record
-
-**Kontext:** Stornogebühr soll automatisch beim nächsten SEPA-Einzug eingezogen werden.
-
-### Entscheidung
-Stornogebühr wird nicht als eigene Zahlungstransaktion modelliert, sondern beim nächsten SEPA-Einzug zum Beitrag addiert. In der Zahlung-Tabelle: Typ "Beitrag+Stornogebühr" oder Betrag = Monatsbeitrag + aufgelaufene Gebühren.
-
-### Alternativen verworfen
-- Eigene Stornogebühr-Transaktion: nicht nötig, Lisa hat keinen Bedarf für separate Ausweisung im v1
-
-### Konsequenzen
-- Positiv: einfacheres Payment-Modell
-- Risiko: weniger granulare Buchführung — für v1 akzeptiert
 
 ---

@@ -1,6 +1,6 @@
 # backlog.md — FitZone
 
-_Stand: 2026-07-03 | Basis: SPEC.md v1_
+_Stand: 2026-07-10 | Basis: SPEC.md v1_
 
 _Stabile Feature-IDs. Nicht umnummerieren. Killed-IDs bleiben killed._
 
@@ -45,7 +45,7 @@ _Stabile Feature-IDs. Nicht umnummerieren. Killed-IDs bleiben killed._
 | FZ-014 | QR-Code Check-in | 2 | hypo | SPEC.md §5 Nice-to-have | v2+, nach stabilem Betrieb |
 | FZ-015 | Admin-Auslastungsübersicht | 2 | hypo | SPEC.md §5 Nice-to-have | v2+ |
 | FZ-016 | Tagespass / Probeabo für Nicht-Mitglieder | 2 | hypo | SPEC.md §5 Nice-to-have | v2+ |
-| FZ-017 | Multi-Standort | — | killed | SPEC.md §4 | Lisa: "keine Mega-Architekturen" — explizit out of scope |
+| FZ-017 | Multi-Standort | — | killed | SPEC.md §3 Regel 29, §5 Nice-to-have | Lisa: "keine Mega-Architekturen" — explizit out of scope |
 
 ---
 
