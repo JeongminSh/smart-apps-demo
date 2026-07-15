@@ -1,5 +1,7 @@
 const nodemailer = require('nodemailer')
 
+const isEthereal = !process.env.MAIL_HOST
+
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST || 'smtp.ethereal.email',
   port: process.env.MAIL_PORT || 587,
@@ -10,12 +12,16 @@ const transporter = nodemailer.createTransport({
 })
 
 async function sendMail({ to, subject, text }) {
-  return transporter.sendMail({
+  const info = await transporter.sendMail({
     from: process.env.MAIL_FROM || 'FitZone <noreply@fitzone.local>',
     to,
     subject,
     text,
   })
+  if (isEthereal) {
+    console.log('Ethereal-Vorschau:', nodemailer.getTestMessageUrl(info))
+  }
+  return info
 }
 
 module.exports = {
