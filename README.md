@@ -38,6 +38,12 @@ Datenbank initialisieren (legt `server/db/fitzone.db` aus `schema.sql` an):
 node db/init.js
 ```
 
+Optional: realistische Testdaten laden (Mitglieder, Trainer, Kurstermine, Buchungen inkl. Warteliste- und No-Show-Testszenarien). Löscht vorher bestehende Daten in diesen Tabellen:
+
+```bash
+node db/seed.js
+```
+
 Server starten:
 
 ```bash
